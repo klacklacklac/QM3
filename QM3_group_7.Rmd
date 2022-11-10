@@ -1,0 +1,330 @@
+---
+title: "QM3_group_7"
+author: "Keene Choy"
+date: "2022-11-10"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## *QM3 Group 7*
+
+# Investigating the correlation between a range of labour market factors and overall crime rate in London boroughs
+
+## Abstract
+
+## Data Analysis
+
+### Installing and Loading Packages
+
+```{r}
+install.packages('readr')
+library(readr)
+install.packages('dplyr')
+library(dplyr)
+install.packages('tidyverse')
+library(tidyverse)
+install.packages('equatiomatic')
+library(equatiomatic)
+install.packages('car')
+library(car)
+install.packages('lmtest')
+library(lmtest)
+```
+
+### Importing Cleaned Data
+
+```{r}
+crime <- read_csv('./crime.csv', show_col_types = FALSE)
+head(crime)
+iwp <- read_csv('./in_work_poverty.csv', show_col_types = FALSE)
+head(iwp)
+income<- read_csv('./income.csv', show_col_types = FALSE)
+head(income)
+neets<- read_csv('./neets.csv', show_col_types = FALSE)
+head(neets)
+emp <- read_csv('./unemployment.csv', show_col_types = FALSE)
+head(emp)
+```
+
+Creating a joined dataframe containing all variables.
+
+```{r}
+reg <- left_join(crime, iwp, by = 'id')
+reg <- left_join(reg, income, by = 'id')
+reg <- left_join(reg, neets, by = 'id')
+reg <- left_join(reg, emp, by = 'id')
+head(reg)
+```
+
+### Descriptive Statistics
+
+#### Crime Rates
+
+```{r}
+summary(reg$crime)
+sd(reg$crime)
+par(mfrow=c(1, 2)) 
+boxplot(reg$crime, main='Crime rates in each borough each year, 2009-2016', ylab='Rate per 1000 population')
+hist(reg$crime, main="Distribution of Crime Rates", xlab="Rate per 1000 population", prob=TRUE)
+lines(density(reg$crime), col="red")
+x <- seq(min(reg$crime), max(reg$crime), length.out=100)
+y <- with(reg, dnorm(x, mean(crime), sd(crime)))
+lines(x, y, col = "blue")
+
+```
+
+![](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAaCAYAAADFTB7LAAAAcElEQVR4Xu3OwQmAQAxE0bClWYCW5N06tM6V2YPg5CjoF/JhLoHAi6iqn9eOefUbqrYvHY0cQDLyAlKRNyARmYA0ZMLRkAlGQyaU72tkAtlim7r/vJqDUDjlKBROOQyFU2icQuMUGqfQuBEaV1XPOwEx96nYACK8+wAAAABJRU5ErkJggg== "Run Current Chunk")
+
+#### In Work Poverty
+
+```{r}
+z<- na.omit(reg$in_work_poverty)
+summary(z)
+sd(z)
+par(mfrow=c(1, 2)) 
+boxplot(reg$in_work_poverty, main='Proportion of <LLW jobs in each borough each year, 2009-2014', ylab='Percent')
+hist(z, main="Distribution of Proportion of <LLW jobs", xlab="Percent", prob=TRUE)
+lines(density(z), col="red")
+x <- seq(min(z), max(z), length.out=100)
+y <- with(reg, dnorm(x, mean(z), sd(z)))
+lines(x, y, col = "blue")
+```
+
+#### Income
+
+```{r}
+summary(reg$income)
+sd(reg$income)
+par(mfrow=c(1, 2)) 
+boxplot(reg$income, main='Resident-based median weekly earnings in each borough each year, 2009-2016', ylab='GBP')
+hist(reg$income, main="Distribution of median weekly earnings", xlab="GBP", prob=TRUE)
+lines(density(reg$income), col="red")
+x <- seq(min(reg$income), max(reg$income), length.out=100)
+y <- with(reg, dnorm(x, mean(income), sd(income)))
+lines(x, y, col = "blue")
+```
+
+#### NEETs
+
+```{r}
+z<- na.omit(reg$neets)
+summary(z)
+sd(z)
+par(mfrow=c(1, 2)) 
+boxplot(reg$neets, main='Proportion of NEETs in each borough each year, 2009-2015', ylab='Precent')
+hist(z, main="Distribution of Proportion of NEETs", xlab="Percent", prob=TRUE)
+lines(density(z), col="red")
+x <- seq(min(z), max(z), length.out=100)
+y <- with(reg, dnorm(x, mean(z), sd(z)))
+lines(x, y, col = "blue")
+```
+
+#### Employment
+
+```{r}
+summary(reg$employment)
+sd(reg$employment)
+par(mfrow=c(1, 2)) 
+boxplot(reg$employment, main='Employment rates in each borough each year, 2009-2016', ylab='Percent')
+hist(reg$employment, main="Distribution of employment rates", xlab="Percent", prob=TRUE)
+lines(density(reg$employment), col="red")
+x <- seq(min(reg$employment), max(reg$employment), length.out=100)
+y <- with(reg, dnorm(x, mean(employment), sd(employment)))
+lines(x, y, col = "blue")
+```
+
+### Bivariate OLS Regressions
+
+#### Crime\~In-work Poverty
+
+Visualizing the relationship between crime rates and proportions of \<LLW jobs
+
+```{r}
+plot(reg$in_work_poverty, reg$crime, col="blue")
+abline(lm(reg$crime~reg$in_work_poverty), col="red", lwd=2)
+```
+
+Creating an OLS model and summarizing results
+
+```{r}
+modiwp<-lm(crime~in_work_poverty, data=reg)
+summary(modiwp)
+extract_eq(modiwp, use_coefs= TRUE)
+```
+
+Model diagnostics
+
+```{r}
+par(mfrow=c(1,2))
+plot(modiwp)
+plot(modiwp, 4)
+residualPlots(modiwp)
+shapiro.test(modiwp$residuals)
+ncvTest(modiwp)
+spreadLevelPlot(modiwp)
+outlierTest(modiwp)
+```
+
+Linearity assumption is met (insignificant Tukey test)
+
+Normality assumption is met (insignificant S-W normality test)
+
+Homoscedasticity assumption is not met (significant NCV score test)
+
+No outliers beyond Cook's Distance
+
+Fixing heteroscedasticity using Weighted Less Square Regression:
+
+```{r}
+wt <- 1 / lm(abs(modiwp$residuals) ~ modiwp$fitted.values)$fitted.values^2
+reg_wlsiwp<-na.omit(reg)
+wls_modiwp <- lm(crime ~ in_work_poverty, data = reg_wlsiwp, weights=wt)
+summary(wls_modiwp)
+```
+
+Re-diagnosing:
+
+```{r}
+par(mfrow=c(1,2))
+plot(wls_modiwp)
+plot(wls_modiwp, 4)
+shapiro.test(wls_modiwp$residuals)
+ncvTest(wls_modiwp)
+spreadLevelPlot(wls_modiwp)
+outlierTest(wls_modiwp)
+```
+
+#### Crime\~Income
+
+Visualizing the relationship between crime rates and residence-based median weekly earnings
+
+```{r}
+plot(reg$income, reg$crime, col="blue")
+abline(lm(reg$crime~reg$income), col="red", lwd=2)
+
+plot(log(reg$income), log(reg$crime), col="blue")
+abline(lm(log(reg$crime)~log(reg$income), col="red", lwd=2)
+```
+
+Creating an OLS model and summarizing results
+
+```{r}
+modinc<-lm(crime~income, data=reg)
+summary(modinc)
+extract_eq(modinc, use_coefs= TRUE)
+```
+
+Model diagnostics
+
+```{r}
+par(mfrow=c(1,2))
+plot(modinc)
+residualPlots(modinc)
+plot(modinc, 4)
+shapiro.test(modinc$residuals)
+ncvTest(modinc)
+spreadLevelPlot(modinc)
+outlierTest(modinc)
+```
+
+Fixing heteroskedasticity by using Weighted Least Squares regression,
+
+```{r}
+wt <- 1 / lm(abs(modinc$residuals) ~ modinc$fitted.values)$fitted.values^2
+wls_modinc <- lm(crime ~ income, data = reg, weights=wt)
+summary(wls_modinc)
+```
+
+Diagnose the weighted model
+
+```{r}
+par(mfrow=c(1,2))
+plot(wls_modinc)
+plot(wls_modinc, 4)
+residualPlots(wls_modinc)
+shapiro.test(wls_modinc$residuals)
+ncvTest(wls_modinc)
+spreadLevelPlot(wls_modinc)
+outlierTest(wls_modinc)
+bptest(wls_modinc)
+```
+
+#### Crime\~NEETs
+
+Visualizing the relationship between crime rates and proportion of NEETs
+
+```{r}
+plot(reg$neets, reg$crime, col="blue")
+abline(lm(reg$crime~reg$neets), col="red", lwd=2)
+```
+
+Creating an OLS model and summarizing results
+
+```{r}
+modnee<-lm(crime~neets, data=reg)
+summary(modnee)
+extract_eq(modnee, use_coefs= TRUE)
+```
+
+Model diagnostics
+
+```{r}
+par(mfrow=c(1,2))
+plot(modnee)
+plot(modnee, 4)
+residualPlots(wls_modinc)
+shapiro.test(modnee$residuals)
+ncvTest(modnee)
+spreadLevelPlot(modnee)
+outlierTest(modnee)
+bptest(modnee)
+```
+
+Linearity assumption is not met (significant Tukey test)
+
+Normality assumption is not met (significant S-W normality test)
+
+Homoscedasticity assumption is met (insignificant NCV score test)
+
+No outliers beyond Cook's Distance
+
+#### Crime\~Employment
+
+Visualizing the relationship between crime rates and employment rates
+
+```{r}
+plot(reg$employment, reg$crime, col="blue")
+abline(lm(reg$crime~reg$employment), col="red", lwd=2)
+```
+
+Creating an OLS model and summarizing results
+
+```{r}
+modemp<-lm(crime ~ employment, data=reg)
+summary(modemp)
+extract_eq(modemp, use_coefs= TRUE)
+```
+
+Model diagnostics
+
+```{r}
+par(mfrow=c(1,2))
+plot(modemp)
+plot(modemp, 4)
+residualPlots(modemp)
+shapiro.test(modemp$residuals)
+ncvTest(modemp)
+spreadLevelPlot(modemp)
+outlierTest(modemp)
+```
+
+Linearity assumption is met (insignificant Tukey test)
+
+Normality assumption is not met (significant S-W normality test)
+
+Homoscedasticity assumption is met (insignificant NCV score test)
+
+No outliers beyond Cook's Distance
