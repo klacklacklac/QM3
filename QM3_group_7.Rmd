@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = FALSE)
 
 ## *QM3 Group 7*
 
-# Investigating the correlation between a range of labour market factors and overall crime rate in London boroughs
+# Investigating the relationship between a range of labour market factors and overall crime rate in London boroughs with linear regression models
 
 ## Abstract
 
@@ -32,6 +32,12 @@ install.packages('car')
 library(car)
 install.packages('lmtest')
 library(lmtest)
+install.packages('MASS')
+library(MASS)
+install.packages('outliers')
+library(outliers)
+install.packages('texreg')
+library(texreg)
 ```
 
 ### Importing Cleaned Data
@@ -73,10 +79,7 @@ lines(density(reg$crime), col="red")
 x <- seq(min(reg$crime), max(reg$crime), length.out=100)
 y <- with(reg, dnorm(x, mean(crime), sd(crime)))
 lines(x, y, col = "blue")
-
 ```
-
-![](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAaCAYAAADFTB7LAAAAcElEQVR4Xu3OwQmAQAxE0bClWYCW5N06tM6V2YPg5CjoF/JhLoHAi6iqn9eOefUbqrYvHY0cQDLyAlKRNyARmYA0ZMLRkAlGQyaU72tkAtlim7r/vJqDUDjlKBROOQyFU2icQuMUGqfQuBEaV1XPOwEx96nYACK8+wAAAABJRU5ErkJggg== "Run Current Chunk")
 
 #### In Work Poverty
 
@@ -110,15 +113,15 @@ lines(x, y, col = "blue")
 #### NEETs
 
 ```{r}
-z<- na.omit(reg$neets)
-summary(z)
-sd(z)
+zz<- na.omit(reg$neets)
+summary(zz)
+sd(zz)
 par(mfrow=c(1, 2)) 
 boxplot(reg$neets, main='Proportion of NEETs in each borough each year, 2009-2015', ylab='Precent')
-hist(z, main="Distribution of Proportion of NEETs", xlab="Percent", prob=TRUE)
-lines(density(z), col="red")
-x <- seq(min(z), max(z), length.out=100)
-y <- with(reg, dnorm(x, mean(z), sd(z)))
+hist(zz, main="Distribution of Proportion of NEETs", xlab="Percent", prob=TRUE)
+lines(density(zz), col="red")
+x <- seq(min(zz), max(zz), length.out=100)
+y <- with(reg, dnorm(x, mean(zz), sd(zz)))
 lines(x, y, col = "blue")
 ```
 
@@ -140,14 +143,14 @@ lines(x, y, col = "blue")
 
 #### Crime\~In-work Poverty
 
-Visualizing the relationship between crime rates and proportions of \<LLW jobs
+**Visualizing the relationship** between crime rates and proportions of \<LLW jobs
 
 ```{r}
 plot(reg$in_work_poverty, reg$crime, col="blue")
 abline(lm(reg$crime~reg$in_work_poverty), col="red", lwd=2)
 ```
 
-Creating an OLS model and summarizing results
+**Creating an OLS model and summarizing results**
 
 ```{r}
 modiwp<-lm(crime~in_work_poverty, data=reg)
@@ -155,7 +158,21 @@ summary(modiwp)
 extract_eq(modiwp, use_coefs= TRUE)
 ```
 
-Model diagnostics
+**Key results:**
+
+-   The estimated intercept $$\alpha$$ is 126.85 and coefficient $\beta$ is -1.95. The equation is $$\widehat{y}=126.85 - 1.95x + \epsilon$$. It predicts that for every 1% increase in proportion of \<LLW jobs there will be a decrease of 1.95 in crime rate per 1000 population.
+
+-   The median of the residuals is rather close to zero. Slightly higher skew towards higher quadrilles in residuals means that the prediction is not as well for the higher proportion of \<LLW jobs as it is for the lower proportion of \<LLW jobs.
+
+-   The t-value is -10.33 with a p-value of \<2e-16, showing confidence that the coefficient is not zero and that the variable in_work_poverty is meaningful predictor to the model.
+
+-   Residual standard error is 19.7 on 184° of freedom.
+
+-   The adjusted $$R^2$$ is 0.364, meaning that 36.4% of the variability between the two variables can be explained by the model taking into account the number of the variables.
+
+-   The F-statistic F(1,184)=106.7, and the significant p-value \<2.2e-16 means that the model fits the data better than an intercept-only model, with a significant $$R^2$$ value.
+
+**Model diagnostics:**
 
 ```{r}
 par(mfrow=c(1,2))
@@ -168,15 +185,23 @@ spreadLevelPlot(modiwp)
 outlierTest(modiwp)
 ```
 
-Linearity assumption is met (insignificant Tukey test)
+**Diagnosis Results:**
 
-Normality assumption is met (insignificant S-W normality test)
+-   Linearity assumption is met (insignificant Tukey test)
 
-Homoscedasticity assumption is not met (significant NCV score test)
+-   Normality assumption is met (insignificant S-W normality test)
 
-No outliers beyond Cook's Distance
+-   Homoscedasticity assumption is not met (significant NCV score test)
 
-Fixing heteroscedasticity using Weighted Less Square Regression:
+-   No outliers beyond Cook's Distance
+
+Heteroscedasticity means that the coefficient estimates remains unbiased but is less precise. Also it might potentially inflate the significance of the t-value and F-values by underestimating their p-values.
+
+**Fixing heteroscedasticity using Weighted Less Square (WLS) Regression:**
+
+-   Here a weight is assigned to each data point based on the variance of its fitted value
+
+-   Data points with lower variance are given more weight and visa versa
 
 ```{r}
 wt <- 1 / lm(abs(modiwp$residuals) ~ modiwp$fitted.values)$fitted.values^2
@@ -185,7 +210,21 @@ wls_modiwp <- lm(crime ~ in_work_poverty, data = reg_wlsiwp, weights=wt)
 summary(wls_modiwp)
 ```
 
-Re-diagnosing:
+**Key results:**
+
+-   The estimated intercept $$\alpha$$ is 122.81 and coefficient $\beta$ is -1.75. The equation is $$\widehat{y}=122.81 - 1.75x + \epsilon$$. It predicts that for every 1% increase in proportion of \<LLW jobs there will be a decrease of 1.75 in crime rate per 1000 population.
+
+-   The median of the residuals here is very close to 0. Noticibly higher skew towards higher quadrilles in residuals means that the prediction is not as well for the higher proportion of \<LLW jobs as it is for the lower proportion of \<LLW jobs.
+
+-   The t-value is -1.24 with a p-value of \<2e-16, showing confidence that the coefficient is not zero and that the variable in_work_poverty is meaningful predictor to the model.
+
+-   Residual standard error is 1.21 on 184° of freedom.
+
+-   The adjusted $$R^2$$ is 0.404, meaning that 40.4% of the variability between the two variables can be explained by the model
+
+-   The F-statistic F(1,184)=126.3, and the significant p-value \<2.2e-16 means that the model fits the data better than an intercept-only model, with a significant $$R^2$$ value.
+
+**Re-diagnosing:**
 
 ```{r}
 par(mfrow=c(1,2))
@@ -197,19 +236,50 @@ spreadLevelPlot(wls_modiwp)
 outlierTest(wls_modiwp)
 ```
 
+Now the assumption of homoskedasticity is met (Insignificant NCV Test results), and normality is maintained (insignificant Shapiro-Wilk test results) without significantly altering lineraity (comparing the two Residuals vs Fitted plot). All datapoints remains within Cook's distance.
+
+**Comparing the fit of the OLS and WLS models:**
+
+```{r}
+library(texreg)
+screenreg(list(modiwp, wls_modiwp))
+AIC(modiwp)
+AIC(wls_modiwp)
+```
+
+With a higher adjusted $R^2$ value, lower AIC and lower residual standard error, we can conclude that the WLS model provides a better fit.
+
+**Plotting confidence and prediction intervals**
+
+```{r}
+conf.int<- predict(wls_modiwp, interval="confidence")
+iwp.cp<- mutate (na.omit(reg), 
+          predicted = wls_modiwp$fitted.values, 
+          residuals = wls_modiwp$residuals)
+iwp.cp<- cbind(iwp.cp, conf.int)
+pred.int<- predict(wls_modiwp, interval="predict")
+iwp.cp<- iwp.cp %>% rename("CIfit"="fit", "CIlwr"="lwr", "CIupr"="upr")
+iwp.cp<-cbind(iwp.cp, pred.int)
+iwp.cp<- iwp.cp%>%rename(PIfit=fit, PIlwr=lwr, PIupr=upr)
+ggplot(iwp.cp, aes(in_work_poverty, crime)) + 
+  geom_point()+
+  stat_smooth(method=lm) +
+  geom_line(aes(y=PIlwr), color="red", linetype="dashed") + 
+  geom_line(aes(y=PIupr), color="red", linetype="dashed")
+
+```
+
 #### Crime\~Income
 
-Visualizing the relationship between crime rates and residence-based median weekly earnings
+**Visualizing the relationship** between crime rates and residence-based median weekly earnings
 
 ```{r}
 plot(reg$income, reg$crime, col="blue")
 abline(lm(reg$crime~reg$income), col="red", lwd=2)
 
-plot(log(reg$income), log(reg$crime), col="blue")
-abline(lm(log(reg$crime)~log(reg$income), col="red", lwd=2)
 ```
 
-Creating an OLS model and summarizing results
+**Creating an OLS model and summarizing results**
 
 ```{r}
 modinc<-lm(crime~income, data=reg)
@@ -217,51 +287,59 @@ summary(modinc)
 extract_eq(modinc, use_coefs= TRUE)
 ```
 
-Model diagnostics
+**Key results:**
+
+-   The estimated intercept $$\alpha$$ is 45.06 and coefficient $\beta$ is 0.078. The equation is $$\widehat{y}=45.06 + 0.078x + \epsilon$$. It predicts that for every £1 increase in a median weekly earnings there will be an increase of 0.078 in crime rate per 1000 population.
+
+-   The median of the residuals is close to 0. Noticibly higher skew towards higher quadrilles in residuals means that the prediction is not as well for the higher median weekly earnings as it is for the lower median weekly earnings.
+
+-   The t-value is 3.633 with a p-value of 0.000341, showing confidence that the coefficient is not zero and that the variable income is meaningful predictor to the model.
+
+-   Residual standard error is 23.81 on 246° of freedom.
+
+-   The adjusted $$R^2$$ is 0.047, meaning that only 4.7% of the variability between the two variables can be explained by the model taking into account the number of the variables.
+
+-   The F-statistic F(1,246)=13.2, and the significant p-value 0.0003409 means that the model fits the data better than an intercept-only model, with a significant $$R^2$$ value.
+
+**Model diagnostics**
 
 ```{r}
 par(mfrow=c(1,2))
 plot(modinc)
-residualPlots(modinc)
 plot(modinc, 4)
+residualPlots(modinc)
 shapiro.test(modinc$residuals)
 ncvTest(modinc)
 spreadLevelPlot(modinc)
 outlierTest(modinc)
 ```
 
-Fixing heteroskedasticity by using Weighted Least Squares regression,
+**Diagnostic results:**
 
-```{r}
-wt <- 1 / lm(abs(modinc$residuals) ~ modinc$fitted.values)$fitted.values^2
-wls_modinc <- lm(crime ~ income, data = reg, weights=wt)
-summary(wls_modinc)
-```
+-   Linearity assumption is not met (significant Tukey test)
 
-Diagnose the weighted model
+-   Normality assumption is not met (significant S-W normality test)
 
-```{r}
-par(mfrow=c(1,2))
-plot(wls_modinc)
-plot(wls_modinc, 4)
-residualPlots(wls_modinc)
-shapiro.test(wls_modinc$residuals)
-ncvTest(wls_modinc)
-spreadLevelPlot(wls_modinc)
-outlierTest(wls_modinc)
-bptest(wls_modinc)
-```
+-   Homoscedasticity assumption is not met (significant NCV score test)
+
+-   No outliers beyond Cook's Distance.
+
+As the linearity assumption is not met, A linear model would not be appropriate in investigating the relationship. A non-linear model should be built for better fit.
+
+As normality assumption is not met as well, the reliability of the model's confidence and prediction interval is lower. A Generalised Linear Model (GLM) might provide better fit for the data in this case.
+
+Heteroscedasticity means that the coefficient estimates remains unbiased but is less precise. Also it might potentially inflate the significance of the t-value and F-values by underestimating their p-values.
 
 #### Crime\~NEETs
 
-Visualizing the relationship between crime rates and proportion of NEETs
+**Visualizing the relationship** between crime rates and proportion of NEETs
 
 ```{r}
 plot(reg$neets, reg$crime, col="blue")
 abline(lm(reg$crime~reg$neets), col="red", lwd=2)
 ```
 
-Creating an OLS model and summarizing results
+**Creating an OLS model and summarizing results**
 
 ```{r}
 modnee<-lm(crime~neets, data=reg)
@@ -269,13 +347,27 @@ summary(modnee)
 extract_eq(modnee, use_coefs= TRUE)
 ```
 
-Model diagnostics
+**Key results:**
+
+-   The estimated intercept $$\alpha$$ is 52.57 and coefficient $\beta$ is 8.20. The equation is $$\widehat{y}=52.57 +8.20x + \epsilon$$. It predicts that for every 1% increase in proportion of NEETs there will be an increase of 8.20 in crime rate per 1000 population.
+
+-   The median of the residuals here is not far from 0. Significantly higher skew towards higher quadrilles in residuals means that the prediction is not as well for the higher proportion of NEETs as it is for the lower proportion of NEETs.
+
+-   The t-value is 9.08 with a p-value of \<2e-16, showing confidence that the coefficient is not zero and that the variable neets is meaningful predictor to the model.
+
+-   Residual standard error is 20.75 on 215° of freedom.
+
+-   The adjusted $$R^2$$ is 0.274, meaning that only 27.4% of the variability between the two variables can be explained by the model taking into account the number of the variables.
+
+-   The F-statistic F(1,215)=82.38, and the significant p-value \<2.2e-16 means that the model fits the data better than an intercept-only model, with a significant $$R^2$$ value.
+
+**Model diagnostics**
 
 ```{r}
 par(mfrow=c(1,2))
 plot(modnee)
 plot(modnee, 4)
-residualPlots(wls_modinc)
+residualPlots(modnee)
 shapiro.test(modnee$residuals)
 ncvTest(modnee)
 spreadLevelPlot(modnee)
@@ -283,24 +375,30 @@ outlierTest(modnee)
 bptest(modnee)
 ```
 
-Linearity assumption is not met (significant Tukey test)
+**Diagnostic report:**
 
-Normality assumption is not met (significant S-W normality test)
+-   Linearity assumption is not met (significant Tukey test)
 
-Homoscedasticity assumption is met (insignificant NCV score test)
+-   Normality assumption is not met (significant S-W normality test)
 
-No outliers beyond Cook's Distance
+-   Homoscedasticity assumption is met (insignificant NCV score test)
+
+-   No outliers beyond Cook's Distance
+
+As the linearity assumption is not met, A linear model would not be appropriate in investigating the relationship. A non-linear model should be built for better fit.
+
+As normality assumption is not met as well, the reliability of the model's confidence and prediction interval is lower. A Generalised Linear Model (GLM) might provide better fit for the data in this case.
 
 #### Crime\~Employment
 
-Visualizing the relationship between crime rates and employment rates
+**Visualizing the relationship** between crime rates and employment rates
 
 ```{r}
 plot(reg$employment, reg$crime, col="blue")
 abline(lm(reg$crime~reg$employment), col="red", lwd=2)
 ```
 
-Creating an OLS model and summarizing results
+**Creating an OLS model and summarizing results**
 
 ```{r}
 modemp<-lm(crime ~ employment, data=reg)
@@ -308,7 +406,21 @@ summary(modemp)
 extract_eq(modemp, use_coefs= TRUE)
 ```
 
-Model diagnostics
+**Key results:**
+
+-   The estimated intercept $$\alpha$$ is 269.95 and coefficient $\beta$ is -262.22. The equation is $$\widehat{y}=269.95 - 262.22x + \epsilon$$. It predicts that for every 1% increase in employment rate there will be a decrease of 2.62 in crime rate per 1000 population.
+
+-   The median of the residuals here is a bit lower than 0. Higher skew towards higher quadrilles in residuals means that the prediction is not as well for the higher employment rate as it is for the lower employment rate.
+
+-   The t-value is -10.37 with a p-value of \<2e-16, showing confidence that the coefficient is not zero and that the variable in_work_poverty is meaningful predictor to the model.
+
+-   Residual standard error is 20.39 on 246° of freedom.
+
+-   The adjusted $$R^2$$ is 0.301, meaning that 30.1% of the variability between the two variables can be explained by the model taking into account the number of the variables.
+
+-   The F-statistic F(1,246)=107.5, and the significant p-value \<2.2e-16 means that the model fits the data better than an intercept-only model, with a significant $$R^2$$ value.
+
+**Model diagnostics**
 
 ```{r}
 par(mfrow=c(1,2))
@@ -321,10 +433,14 @@ spreadLevelPlot(modemp)
 outlierTest(modemp)
 ```
 
-Linearity assumption is met (insignificant Tukey test)
+**Diagnostic report:**
 
-Normality assumption is not met (significant S-W normality test)
+-   Linearity assumption is met (insignificant Tukey test)
 
-Homoscedasticity assumption is met (insignificant NCV score test)
+-   Normality assumption is not met (significant S-W normality test)
 
-No outliers beyond Cook's Distance
+-   Homoscedasticity assumption is met (insignificant NCV score test)
+
+-   No outliers beyond Cook's Distance
+
+Non-normality means that while the regression peremeters are still precise, the reliability of the model's confidence and prediction interval is lower. In this case a Generalised Linear Model (GLM) might provide better fit for the data. However, the model remains BLUE.
