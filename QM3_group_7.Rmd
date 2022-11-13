@@ -1,19 +1,21 @@
 ---
-title: "QM3_group_7"
+title: "QM3 Group 7"
 author: "Keene Choy"
-date: "2022-11-10"
+date: "2022-11-13"
 output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## *QM3 Group 7*
+### *QM3 Group 7*
 
 # Investigating the relationship between a range of labour market factors and overall crime rate in London boroughs with linear regression models
 
 ## Abstract
+
+This project aims to investigate the relationship between labour market factors (in-work poverty, income, NEETs, employment) and crime in London boroughs. Based on data collected from 2009-2016 by the Office of National Statistics, and by utilising bivariate OLS and WLS regression models, we were able to establish linear negative relationships between crime and proportion of low-income jobs and between crime and employment rates, with estimators satisfying the Gauss-Markov assumptions. For the latter, however, more advanced models are needed to provide statistically reliable prediction based on regression, warranting further research.
 
 ## Data Analysis
 
@@ -42,6 +44,8 @@ library(texreg)
 
 ### Importing Cleaned Data
 
+**5 .csv files containing cleaned data each for one variable**
+
 ```{r}
 crime <- read_csv('./crime.csv', show_col_types = FALSE)
 head(crime)
@@ -55,7 +59,7 @@ emp <- read_csv('./unemployment.csv', show_col_types = FALSE)
 head(emp)
 ```
 
-Creating a joined dataframe containing all variables.
+**Creating a joined dataframe** containing all variables.
 
 ```{r}
 reg <- left_join(crime, iwp, by = 'id')
@@ -160,7 +164,7 @@ extract_eq(modiwp, use_coefs= TRUE)
 
 **Key results:**
 
--   The estimated intercept $$\alpha$$ is 126.85 and coefficient $\beta$ is -1.95. The equation is $$\widehat{y}=126.85 - 1.95x + \epsilon$$. It predicts that for every 1% increase in proportion of \<LLW jobs there will be a decrease of 1.95 in crime rate per 1000 population.
+-   The estimated intercept $\alpha$ is 126.85 and coefficient $\beta$ is -1.95. The equation is $$\widehat{y}=126.85 - 1.95x + \epsilon$$. It predicts that for every 1% increase in proportion of \<LLW jobs there will be a decrease of 1.95 in crime rate per 1000 population.
 
 -   The median of the residuals is rather close to zero. Slightly higher skew towards higher quadrilles in residuals means that the prediction is not as well for the higher proportion of \<LLW jobs as it is for the lower proportion of \<LLW jobs.
 
@@ -168,9 +172,9 @@ extract_eq(modiwp, use_coefs= TRUE)
 
 -   Residual standard error is 19.7 on 184° of freedom.
 
--   The adjusted $$R^2$$ is 0.364, meaning that 36.4% of the variability between the two variables can be explained by the model taking into account the number of the variables.
+-   The adjusted $R^2$ is 0.364, meaning that 36.4% of the variability between the two variables can be explained by the model taking into account the number of the variables.
 
--   The F-statistic F(1,184)=106.7, and the significant p-value \<2.2e-16 means that the model fits the data better than an intercept-only model, with a significant $$R^2$$ value.
+-   The F-statistic F(1,184)=106.7, and the significant p-value \<2.2e-16 means that the model fits the data better than an intercept-only model, with a significant $R^2$ value.
 
 **Model diagnostics:**
 
@@ -212,17 +216,17 @@ summary(wls_modiwp)
 
 **Key results:**
 
--   The estimated intercept $$\alpha$$ is 122.81 and coefficient $\beta$ is -1.75. The equation is $$\widehat{y}=122.81 - 1.75x + \epsilon$$. It predicts that for every 1% increase in proportion of \<LLW jobs there will be a decrease of 1.75 in crime rate per 1000 population.
+-   The estimated intercept $\alpha$ is 122.81 and coefficient $\beta$ is -1.75. The equation is $$\widehat{y}=122.81 - 1.75x + \epsilon$$. It predicts that for every 1% increase in proportion of \<LLW jobs there will be a decrease of 1.75 in crime rate per 1000 population.
 
--   The median of the residuals here is very close to 0. Noticibly higher skew towards higher quadrilles in residuals means that the prediction is not as well for the higher proportion of \<LLW jobs as it is for the lower proportion of \<LLW jobs.
+-   The median of the residuals here is very close to 0. Noticeably higher skew towards higher quadrilles in residuals means that the prediction is not as well for the higher proportion of \<LLW jobs as it is for the lower proportion of \<LLW jobs.
 
 -   The t-value is -1.24 with a p-value of \<2e-16, showing confidence that the coefficient is not zero and that the variable in_work_poverty is meaningful predictor to the model.
 
 -   Residual standard error is 1.21 on 184° of freedom.
 
--   The adjusted $$R^2$$ is 0.404, meaning that 40.4% of the variability between the two variables can be explained by the model
+-   The adjusted $R^2$ is 0.404, meaning that 40.4% of the variability between the two variables can be explained by the model
 
--   The F-statistic F(1,184)=126.3, and the significant p-value \<2.2e-16 means that the model fits the data better than an intercept-only model, with a significant $$R^2$$ value.
+-   The F-statistic F(1,184)=126.3, and the significant p-value \<2.2e-16 means that the model fits the data better than an intercept-only model, with a significant $R^2$ value.
 
 **Re-diagnosing:**
 
@@ -251,8 +255,7 @@ With a higher adjusted $R^2$ value, lower AIC and lower residual standard error,
 
 **Plotting confidence and prediction intervals**
 
-```{r}
-conf.int<- predict(wls_modiwp, interval="confidence")
+```{conf.int<- predict(wls_modiwp, interval="confidence")}
 iwp.cp<- mutate (na.omit(reg), 
           predicted = wls_modiwp$fitted.values, 
           residuals = wls_modiwp$residuals)
@@ -266,7 +269,6 @@ ggplot(iwp.cp, aes(in_work_poverty, crime)) +
   stat_smooth(method=lm) +
   geom_line(aes(y=PIlwr), color="red", linetype="dashed") + 
   geom_line(aes(y=PIupr), color="red", linetype="dashed")
-
 ```
 
 #### Crime\~Income
@@ -276,7 +278,6 @@ ggplot(iwp.cp, aes(in_work_poverty, crime)) +
 ```{r}
 plot(reg$income, reg$crime, col="blue")
 abline(lm(reg$crime~reg$income), col="red", lwd=2)
-
 ```
 
 **Creating an OLS model and summarizing results**
@@ -289,19 +290,19 @@ extract_eq(modinc, use_coefs= TRUE)
 
 **Key results:**
 
--   The estimated intercept $$\alpha$$ is 45.06 and coefficient $\beta$ is 0.078. The equation is $$\widehat{y}=45.06 + 0.078x + \epsilon$$. It predicts that for every £1 increase in a median weekly earnings there will be an increase of 0.078 in crime rate per 1000 population.
+-   The estimated intercept $\alpha$ is 45.06 and coefficient $\beta$ is 0.078. The equation is $$\widehat{y}=45.06 + 0.078x + \epsilon$$. It predicts that for every £1 increase in a median weekly earnings there will be an increase of 0.078 in crime rate per 1000 population.
 
--   The median of the residuals is close to 0. Noticibly higher skew towards higher quadrilles in residuals means that the prediction is not as well for the higher median weekly earnings as it is for the lower median weekly earnings.
+-   The median of the residuals is close to 0. Noticeably higher skew towards higher quadrilles in residuals means that the prediction is not as well for the higher median weekly earnings as it is for the lower median weekly earnings.
 
 -   The t-value is 3.633 with a p-value of 0.000341, showing confidence that the coefficient is not zero and that the variable income is meaningful predictor to the model.
 
 -   Residual standard error is 23.81 on 246° of freedom.
 
--   The adjusted $$R^2$$ is 0.047, meaning that only 4.7% of the variability between the two variables can be explained by the model taking into account the number of the variables.
+-   The adjusted $R^2$ is 0.047, meaning that only 4.7% of the variability between the two variables can be explained by the model taking into account the number of the variables.
 
--   The F-statistic F(1,246)=13.2, and the significant p-value 0.0003409 means that the model fits the data better than an intercept-only model, with a significant $$R^2$$ value.
+-   The F-statistic F(1,246)=13.2, and the significant p-value 0.0003409 means that the model fits the data better than an intercept-only model, with a significant $R^2$ value.
 
-**Model diagnostics**
+**Model diagnostics:**
 
 ```{r}
 par(mfrow=c(1,2))
@@ -349,7 +350,7 @@ extract_eq(modnee, use_coefs= TRUE)
 
 **Key results:**
 
--   The estimated intercept $$\alpha$$ is 52.57 and coefficient $\beta$ is 8.20. The equation is $$\widehat{y}=52.57 +8.20x + \epsilon$$. It predicts that for every 1% increase in proportion of NEETs there will be an increase of 8.20 in crime rate per 1000 population.
+-   The estimated intercept $\alpha$ is 52.57 and coefficient $\beta$ is 8.20. The equation is $$\widehat{y}=52.57 +8.20x + \epsilon$$. It predicts that for every 1% increase in proportion of NEETs there will be an increase of 8.20 in crime rate per 1000 population.
 
 -   The median of the residuals here is not far from 0. Significantly higher skew towards higher quadrilles in residuals means that the prediction is not as well for the higher proportion of NEETs as it is for the lower proportion of NEETs.
 
@@ -357,11 +358,11 @@ extract_eq(modnee, use_coefs= TRUE)
 
 -   Residual standard error is 20.75 on 215° of freedom.
 
--   The adjusted $$R^2$$ is 0.274, meaning that only 27.4% of the variability between the two variables can be explained by the model taking into account the number of the variables.
+-   The adjusted $R^2$ is 0.274, meaning that only 27.4% of the variability between the two variables can be explained by the model taking into account the number of the variables.
 
--   The F-statistic F(1,215)=82.38, and the significant p-value \<2.2e-16 means that the model fits the data better than an intercept-only model, with a significant $$R^2$$ value.
+-   The F-statistic F(1,215)=82.38, and the significant p-value \<2.2e-16 means that the model fits the data better than an intercept-only model, with a significant $R^2$ value.
 
-**Model diagnostics**
+**Model diagnostics:**
 
 ```{r}
 par(mfrow=c(1,2))
@@ -372,7 +373,6 @@ shapiro.test(modnee$residuals)
 ncvTest(modnee)
 spreadLevelPlot(modnee)
 outlierTest(modnee)
-bptest(modnee)
 ```
 
 **Diagnostic report:**
@@ -408,7 +408,7 @@ extract_eq(modemp, use_coefs= TRUE)
 
 **Key results:**
 
--   The estimated intercept $$\alpha$$ is 269.95 and coefficient $\beta$ is -262.22. The equation is $$\widehat{y}=269.95 - 262.22x + \epsilon$$. It predicts that for every 1% increase in employment rate there will be a decrease of 2.62 in crime rate per 1000 population.
+-   The estimated intercept $\alpha$ is 269.95 and coefficient $\beta$ is -262.22. The equation is $$\widehat{y}=269.95 - 262.22x + \epsilon$$. It predicts that for every 1% increase in employment rate there will be a decrease of 2.62 in crime rate per 1000 population.
 
 -   The median of the residuals here is a bit lower than 0. Higher skew towards higher quadrilles in residuals means that the prediction is not as well for the higher employment rate as it is for the lower employment rate.
 
@@ -416,11 +416,11 @@ extract_eq(modemp, use_coefs= TRUE)
 
 -   Residual standard error is 20.39 on 246° of freedom.
 
--   The adjusted $$R^2$$ is 0.301, meaning that 30.1% of the variability between the two variables can be explained by the model taking into account the number of the variables.
+-   The adjusted $R^2$ is 0.301, meaning that 30.1% of the variability between the two variables can be explained by the model taking into account the number of the variables.
 
--   The F-statistic F(1,246)=107.5, and the significant p-value \<2.2e-16 means that the model fits the data better than an intercept-only model, with a significant $$R^2$$ value.
+-   The F-statistic F(1,246)=107.5, and the significant p-value \<2.2e-16 means that the model fits the data better than an intercept-only model, with a significant $R^2$ value.
 
-**Model diagnostics**
+**Model diagnostics:**
 
 ```{r}
 par(mfrow=c(1,2))
@@ -443,4 +443,4 @@ outlierTest(modemp)
 
 -   No outliers beyond Cook's Distance
 
-Non-normality means that while the regression peremeters are still precise, the reliability of the model's confidence and prediction interval is lower. In this case a Generalised Linear Model (GLM) might provide better fit for the data. However, the model remains BLUE.
+Non-normality means that while the regression paremeters are still precise, the reliability of the model's confidence and prediction interval is lower. In this case a Generalised Linear Model (GLM) might provide better fit for the data. However, the model remains BLUE.
